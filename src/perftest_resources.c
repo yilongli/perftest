@@ -3932,12 +3932,6 @@ int run_iter_bw_infinitely(struct pingpong_context* ctx,
     alarm(user_param->duration);
     user_param->iters = 0;
 
-    /* Will be 0, in case of Duration (look at force_dependencies or in the exp above) */
-    if (user_param->duplex &&
-        (user_param->use_xrc || user_param->connection_type == DC)) {
-            num_of_qps /= 2;
-    }
-
     user_param->tposted[0] = get_cycles();
 
     /* main loop for posting */
@@ -3947,44 +3941,16 @@ int run_iter_bw_infinitely(struct pingpong_context* ctx,
 
             while ((ctx->scnt[index] - ctx->ccnt[index]) <
                    user_param->tx_depth) {
-                if (ctx->send_rcredit) {
-                    uint32_t swindow =
-                            scnt_for_qp[index] + user_param->post_list -
-                            ctx->credit_buf[index];
-                    if (swindow >= user_param->rx_depth) {
-                        break;
-                    }
-                }
 
                 if (user_param->post_list == 1 &&
                     (ctx->scnt[index] % user_param->cq_mod == 0 &&
                      user_param->cq_mod > 1)) {
 
-#ifdef HAVE_VERBS_EXP
-                                                                                                                                            #ifdef HAVE_ACCL_VERBS
-					if (user_param->verb_type == ACCL_INTF)
-						ctx->exp_wr[index].exp_send_flags &= ~IBV_EXP_QP_BURST_SIGNALED;
-					else {
-					#endif
-						if (user_param->use_exp == 1)
-							ctx->exp_wr[index].exp_send_flags &= ~IBV_EXP_SEND_SIGNALED;
-						else
-#endif
                     ctx->wr[index].send_flags &= ~IBV_SEND_SIGNALED;
-#ifdef HAVE_ACCL_VERBS
-                    }
-#endif
                 }
 
-#ifdef HAVE_VERBS_EXP
-                                                                                                                                        if (user_param->use_exp == 1)
-					err = (ctx->exp_post_send_func_pointer)(ctx->qp[index],&ctx->exp_wr[index*user_param->post_list],&bad_exp_wr);
-				else
-					err = (ctx->post_send_func_pointer)(ctx->qp[index],&ctx->wr[index*user_param->post_list],&bad_wr);
-#else
                 err = ibv_post_send(ctx->qp[index],
                         &ctx->wr[index * user_param->post_list], &bad_wr);
-#endif
                 if (err) {
                     fprintf(stderr, "Couldn't post send: %d scnt=%lu \n", index,
                             ctx->scnt[index]);
@@ -4001,20 +3967,7 @@ int run_iter_bw_infinitely(struct pingpong_context* ctx,
                      user_param->cq_mod - 1 ||
                      (user_param->test_type == ITERATIONS &&
                       ctx->scnt[index] == user_param->iters - 1))) {
-#ifdef HAVE_VERBS_EXP
-                                                                                                                                            #ifdef HAVE_ACCL_VERBS
-					if (user_param->verb_type == ACCL_INTF)
-						ctx->exp_wr[index].exp_send_flags |= IBV_EXP_QP_BURST_SIGNALED;
-					else {
-					#endif
-						if (user_param->use_exp == 1)
-							ctx->exp_wr[index].exp_send_flags |= IBV_EXP_SEND_SIGNALED;
-						else
-#endif
                     ctx->wr[index].send_flags |= IBV_SEND_SIGNALED;
-#ifdef HAVE_ACCL_VERBS
-                    }
-#endif
                 }
             }
         }
@@ -4110,55 +4063,6 @@ int run_iter_bw_infinitely_server(struct pingpong_context* ctx,
                                 (int) wc[i].wr_id);
                         return_value = 15;
                         goto cleaning;
-                    }
-                    if (ctx->send_rcredit) {
-                        rcnt_for_qp[wc[i].wr_id]++;
-                        scredit_for_qp[wc[i].wr_id]++;
-
-                        if (scredit_for_qp[wc[i].wr_id] == ctx->credit_cnt) {
-                            struct ibv_send_wr* bad_wr = NULL;
-                            ctx->ctrl_buf[wc[i].wr_id] = rcnt_for_qp[wc[i].wr_id];
-
-                            while (ccnt_for_qp[wc[i].wr_id] ==
-                                   user_param->tx_depth) {
-                                int sne, j = 0;
-
-                                sne = ibv_poll_cq(ctx->send_cq,
-                                        user_param->tx_depth, swc);
-                                if (sne > 0) {
-                                    for (j = 0; j < sne; j++) {
-                                        if (swc[j].status != IBV_WC_SUCCESS) {
-                                            fprintf(stderr,
-                                                    "Poll send CQ error status=%u qp %d credit=%lu scredit=%lu\n",
-                                                    swc[j].status,
-                                                    (int) swc[j].wr_id,
-                                                    rcnt_for_qp[swc[j].wr_id],
-                                                    ccnt_for_qp[swc[j].wr_id]);
-                                            return_value = FAILURE;
-                                            goto cleaning;
-                                        }
-                                        ccnt_for_qp[swc[j].wr_id]--;
-                                    }
-
-                                } else if (sne < 0) {
-                                    fprintf(stderr,
-                                            "Poll send CQ failed ne=%d\n", sne);
-                                    return_value = FAILURE;
-                                    goto cleaning;
-                                }
-                            }
-                            if (ibv_post_send(ctx->qp[wc[i].wr_id],
-                                    &ctx->ctrl_wr[wc[i].wr_id], &bad_wr)) {
-                                fprintf(stderr,
-                                        "Couldn't post send qp %d credit=%lu\n",
-                                        (int) wc[i].wr_id,
-                                        rcnt_for_qp[wc[i].wr_id]);
-                                return_value = FAILURE;
-                                goto cleaning;
-                            }
-                            ccnt_for_qp[wc[i].wr_id]++;
-                            scredit_for_qp[wc[i].wr_id] = 0;
-                        }
                     }
                 }
             }

@@ -184,18 +184,6 @@ int main(int argc, char* argv[]) {
         }
         return FAILURE;
     }
-    if ((user_param.connection_type == DC || user_param.use_xrc) &&
-        user_param.duplex) {
-        user_param.num_of_qps *= 2;
-    }
-    /* Checking that the user did not run with RawEth. for this we have raw_etherent_bw test. */
-    if (user_param.connection_type == RawEth) {
-        fprintf(stderr,
-                " This test cannot run Raw Ethernet QPs (you have chosen RawEth as connection type\n");
-        fprintf(stderr,
-                " For this we have raw_ethernet_bw test in this package.\n");
-        return FAILURE;
-    }
 
     /* Finding the IB device selected (or defalut if no selected). */
     ib_dev = ctx_find_dev(user_param.ib_devname);
@@ -203,9 +191,6 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, " Unable to find the Infiniband/RoCE device\n");
         return FAILURE;
     }
-
-    if (user_param.use_mcg) GET_STRING(mcg_params.ib_devname,
-            ibv_get_device_name(ib_dev));
 
     /* Getting the relevant context from the device */
     ctx.context = ibv_open_device(ib_dev);
@@ -259,22 +244,12 @@ int main(int argc, char* argv[]) {
     ALLOCATE(rem_dest, struct pingpong_dest, user_param.num_of_qps);
     memset(rem_dest, 0, sizeof(struct pingpong_dest) * user_param.num_of_qps);
 
-    if (user_param.transport_type == IBV_TRANSPORT_IWARP) {
-        ctx.send_rcredit = 1;
-    }
-
     /* Allocating arrays needed for the test. */
     alloc_ctx(&ctx, &user_param);
 
     /* Create RDMA CM resources and connect through CM. */
     if (user_param.work_rdma_cm == ON) {
-        rc = create_rdma_cm_connection(&ctx, &user_param, &user_comm,
-                my_dest, rem_dest);
-        if (rc) {
-            fprintf(stderr,
-                    "Failed to create RDMA CM connection with resources.\n");
-            return FAILURE;
-        }
+        fprintf(stderr, "RDMA connection manager not supported!\n");
     } else {
         /* create all the basic IB resources (data buffer, PD, MR, CQ and events channel) */
         if (ctx_init(&ctx, &user_param)) {
@@ -292,10 +267,6 @@ int main(int argc, char* argv[]) {
 
     /* Print basic test information. */
     ctx_print_test_info(&user_param);
-
-    if (ctx.send_rcredit) {
-        ctx_alloc_credit(&ctx, &user_param, my_dest);
-    }
 
     for (i = 0; i < user_param.num_of_qps; i++)
         ctx_print_pingpong_data(&my_dest[i], &user_comm);
@@ -321,35 +292,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    /* If credit for available recieve buffers is necessary,
-     * the credit sending is done via RDMA WRITE ops and the ctx_hand_shake above
-     * is used to exchange the rkeys and buf addresses for the RDMA WRITEs
-     */
-    if (ctx.send_rcredit) {
-        ctx_set_credit_wqes(&ctx, &user_param, rem_dest);
-    }
-
-    /* Joining the Send side port the Mcast gid */
-    if (user_param.use_mcg &&
-        (user_param.machine == CLIENT || user_param.duplex)) {
-
-        memcpy(mcg_params.mgid.raw, rem_dest[0].gid.raw, 16);
-        if (set_mcast_group(&ctx, &user_param, &mcg_params)) {
-            fprintf(stderr, " Unable to Join Sender to Mcast gid\n");
-            return FAILURE;
-        }
-        /*
-         * The next stall in code (50 ms sleep) is a work around for fixing the
-         * the bug this test had in Multicast for the past 1 year.
-         * It appears, that when a switch involved, it takes ~ 10 ms for the join
-         * request to propogate on the IB fabric, thus we need to wait for it.
-         * what happened before this fix was client reaching the post_send
-         * code segment in about 350 ns from here, and the switch(es) dropped
-         * the packet because join request wasn't finished.
-         */
-        usleep(50000);
-    }
-
     if (user_param.work_rdma_cm == OFF) {
 
         /* Prepare IB resources for rtr/rts. */
@@ -365,19 +307,6 @@ int main(int argc, char* argv[]) {
         return FAILURE;
     }
 
-    if (user_param.use_event) {
-
-        if (ibv_req_notify_cq(ctx.send_cq, 0)) {
-            fprintf(stderr, " Couldn't request CQ notification\n");
-            return FAILURE;
-        }
-
-        if (ibv_req_notify_cq(ctx.recv_cq, 0)) {
-            fprintf(stderr, " Couldn't request CQ notification\n");
-            return FAILURE;
-        }
-    }
-
     if (user_param.output == FULL_VERBOSITY) {
         if (user_param.report_per_port) {
             printf(RESULT_LINE_PER_PORT);
@@ -391,139 +320,7 @@ int main(int argc, char* argv[]) {
                                                 : RESULT_EXT));
     }
 
-    if (user_param.test_method == RUN_ALL) {
-
-        if (user_param.connection_type == UD) {
-            size_max_pow =
-                    (int) UD_MSG_2_EXP(MTU_SIZE(user_param.curr_mtu)) + 1;
-        }
-
-        for (i = 1; i < size_max_pow; ++i) {
-
-            user_param.size = (uint64_t) 1 << i;
-
-            if (user_param.machine == CLIENT || user_param.duplex) {
-                ctx_set_send_wqes(&ctx, &user_param, rem_dest);
-            }
-
-            if (user_param.machine == SERVER || user_param.duplex) {
-                if (ctx_set_recv_wqes(&ctx, &user_param)) {
-                    fprintf(stderr, " Failed to post receive recv_wqes\n");
-                    return FAILURE;
-                }
-            }
-
-            if (ctx_hand_shake(&user_comm, &my_dest[0], &rem_dest[0])) {
-                fprintf(stderr,
-                        "Failed to exchange data between server and clients\n");
-                return FAILURE;
-            }
-
-            if (ctx.send_rcredit) {
-                int j;
-                for (j = 0; j < user_param.num_of_qps; j++)
-                    ctx.credit_buf[j] = 0;
-            }
-
-            if (user_param.duplex) {
-                if (run_iter_bi(&ctx, &user_param)) {
-                    return 17;
-                }
-
-            } else if (user_param.machine == CLIENT) {
-
-                if (run_iter_bw(&ctx, &user_param)) {
-                    return 17;
-                }
-
-            } else {
-
-                if (run_iter_bw_server(&ctx, &user_param)) {
-                    return 17;
-                }
-            }
-
-            print_report_bw(&user_param, &my_bw_rep);
-
-            if (user_param.duplex && user_param.test_type != DURATION) {
-                xchg_bw_reports(&user_comm, &my_bw_rep, &rem_bw_rep,
-                        atof(user_param.rem_version));
-                print_full_bw_report(&user_param, &my_bw_rep, &rem_bw_rep);
-            }
-            if (ctx_hand_shake(&user_comm, &my_dest[0], &rem_dest[0])) {
-                fprintf(stderr,
-                        "Failed to exchange data between server and clients\n");
-                return FAILURE;
-            }
-
-            /* Check if last iteration ended well in UC/UD */
-            if (user_param.check_alive_exited) {
-                break;
-            }
-        }
-
-    } else if (user_param.test_method == RUN_REGULAR) {
-
-        if (user_param.machine == CLIENT || user_param.duplex) {
-            ctx_set_send_wqes(&ctx, &user_param, rem_dest);
-        }
-
-        if (user_param.machine == SERVER || user_param.duplex) {
-            if (ctx_set_recv_wqes(&ctx, &user_param)) {
-                fprintf(stderr, " Failed to post receive recv_wqes\n");
-                return FAILURE;
-            }
-        }
-
-        if (ctx_hand_shake(&user_comm, &my_dest[0], &rem_dest[0])) {
-            fprintf(stderr,
-                    "Failed to exchange data between server and clients\n");
-            return FAILURE;
-        }
-
-        if (user_param.duplex) {
-
-            if (run_iter_bi(&ctx, &user_param)) {
-                return 17;
-            }
-
-        } else if (user_param.machine == CLIENT) {
-
-            if (run_iter_bw(&ctx, &user_param)) {
-                return 17;
-            }
-
-        } else if (run_iter_bw_server(&ctx, &user_param)) {
-
-            return 17;
-        }
-
-        print_report_bw(&user_param, &my_bw_rep);
-
-        if (user_param.duplex && user_param.test_type != DURATION) {
-            xchg_bw_reports(&user_comm, &my_bw_rep, &rem_bw_rep,
-                    atof(user_param.rem_version));
-            print_full_bw_report(&user_param, &my_bw_rep, &rem_bw_rep);
-        }
-
-        if (user_param.report_both && user_param.duplex) {
-            printf(RESULT_LINE);
-            printf("\n Local results: \n");
-            printf(RESULT_LINE);
-            printf((user_param.report_fmt == MBS ? RESULT_FMT : RESULT_FMT_G));
-            printf((user_param.cpu_util_data.enable ? RESULT_EXT_CPU_UTIL
-                                                    : RESULT_EXT));
-            print_full_bw_report(&user_param, &my_bw_rep, NULL);
-            printf(RESULT_LINE);
-
-            printf("\n Remote results: \n");
-            printf(RESULT_LINE);
-            printf((user_param.report_fmt == MBS ? RESULT_FMT : RESULT_FMT_G));
-            printf((user_param.cpu_util_data.enable ? RESULT_EXT_CPU_UTIL
-                                                    : RESULT_EXT));
-            print_full_bw_report(&user_param, &rem_bw_rep, NULL);
-        }
-    } else if (user_param.test_method == RUN_INFINITELY) {
+    if (user_param.test_method == RUN_INFINITELY) {
 
         if (user_param.machine == CLIENT) {
             ctx_set_send_wqes(&ctx, &user_param, rem_dest);
@@ -557,6 +354,8 @@ int main(int argc, char* argv[]) {
                 return FAILURE;
             }
         }
+    } else {
+        fprintf(stderr, "Only test method --run_infinitely is supported!\n");
     }
 
     if (user_param.output == FULL_VERBOSITY) {
@@ -576,24 +375,6 @@ int main(int argc, char* argv[]) {
     /* Destroy all test resources, including Mcast if exists */
     if (send_destroy_ctx(&ctx, &user_param, &mcg_params)) {
         fprintf(stderr, "Couldn't destroy all SEND resources\n");
-        return FAILURE;
-    }
-    if (user_param.work_rdma_cm == ON) {
-        user_comm.rdma_params->work_rdma_cm = OFF;
-
-        if (destroy_ctx(user_comm.rdma_ctx, user_comm.rdma_params)) {
-            fprintf(stderr, "Failed to destroy resources\n");
-            return FAILURE;
-        }
-    }
-
-    if (!user_param.is_bw_limit_passed && (user_param.is_limit_bw == ON)) {
-        fprintf(stderr, "Error: BW result is below bw limit\n");
-        return FAILURE;
-    }
-
-    if (!user_param.is_msgrate_limit_passed && (user_param.is_limit_bw == ON)) {
-        fprintf(stderr, "Error: Msg rate  is below msg_rate limit\n");
         return FAILURE;
     }
 
