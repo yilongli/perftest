@@ -62,18 +62,18 @@
 #include <infiniband/umad.h>
 #include "get_clock.h"
 
-#define QPNUM_MCAST 				0xffffff
-#define DEF_QKEY     			    0x11111111
-#define DEF_PKEY_IDX        		0
-#define DEF_SLL              		0
+#define QPNUM_MCAST                0xffffff
+#define DEF_QKEY                    0x11111111
+#define DEF_PKEY_IDX                0
+#define DEF_SLL                    0
 #define MAX_POLL_ITERATION_TIMEOUT  1000000
 #define MCG_GID {255,1,0,0,0,2,201,133,0,0,0,0,0,0,0,0}
 
 /* Definitions section for MADs */
 #define SUBN_ADM_ATTR_MC_MEMBER_RECORD 0x38
-#define MANAGMENT_CLASS_SUBN_ADM       0x03 	  /* Subnet Administration class */
+#define MANAGMENT_CLASS_SUBN_ADM       0x03      /* Subnet Administration class */
 #define MCMEMBER_JOINSTATE_FULL_MEMBER 0x1
-#define MAD_SIZE                       256	      /* The size of a MAD is 256 bytes */
+#define MAD_SIZE                       256          /* The size of a MAD is 256 bytes */
 #define QP1_WELL_KNOWN_Q_KEY           0x80010000 /* Q_Key value of QP1 */
 #define DEF_TRANS_ID                   0x12345678 /* TransactionID */
 #define DEF_TCLASS                     0
@@ -83,40 +83,40 @@
 #define MASK32(S)  ( ((uint32_t) ~0L) >> (32-(S)) )
 
 /* generate a bit mask with bits O+S..O set (assumes 32 bit integer). */
-#define BITS32(O,S) ( MASK32(S) << (O) )
+#define BITS32(O, S) ( MASK32(S) << (O) )
 
 /* extract S bits from (u_int32_t)W with offset O and shifts them O places to the right */
-#define EXTRACT32(W,O,S) ( ((W)>>(O)) & MASK32(S) )
+#define EXTRACT32(W, O, S) ( ((W)>>(O)) & MASK32(S) )
 
 /* insert S bits with offset O from field F into word W (u_int32_t) */
-#define INSERT32(W,F,O,S) (/*(W)=*/ ( ((W) & (~BITS32(O,S)) ) | (((F) & MASK32(S))<<(O)) ))
+#define INSERT32(W, F, O, S) (/*(W)=*/ ( ((W) & (~BITS32(O,S)) ) | (((F) & MASK32(S))<<(O)) ))
 
 #ifndef INSERTF
-#define INSERTF(W,O1,F,O2,S) (INSERT32(W, EXTRACT32(F, O2, S), O1, S) )
+#define INSERTF(W, O1, F, O2, S) (INSERT32(W, EXTRACT32(F, O2, S), O1, S) )
 #endif
 
 
 /* according to Table 187 in the IB spec 1.2.1 */
 typedef enum {
-	SUBN_ADM_METHOD_SET    = 0x2,
-	SUBN_ADM_METHOD_DELETE = 0x15
+    SUBN_ADM_METHOD_SET = 0x2,
+    SUBN_ADM_METHOD_DELETE = 0x15
 } subn_adm_method;
 
 /* Utilities for Umad Usage. */
 typedef enum {
-	SUBN_ADM_COMPMASK_MGID         = (1ULL << 0),
-	SUBN_ADM_COMPMASK_PORT_GID     = (1ULL << 1),
-	SUBN_ADM_COMPMASK_Q_KEY	       = (1ULL << 2),
-	SUBN_ADM_COMPMASK_P_KEY	       = (1ULL << 7),
-	SUBN_ADM_COMPMASK_TCLASS       = (1ULL << 6),
-	SUBN_ADM_COMPMASK_SL           = (1ULL << 12),
-	SUBN_ADM_COMPMASK_FLOW_LABEL   = (1ULL << 13),
-	SUBN_ADM_COMPMASK_JOIN_STATE   = (1ULL << 16),
+    SUBN_ADM_COMPMASK_MGID = (1ULL << 0),
+    SUBN_ADM_COMPMASK_PORT_GID = (1ULL << 1),
+    SUBN_ADM_COMPMASK_Q_KEY = (1ULL << 2),
+    SUBN_ADM_COMPMASK_P_KEY = (1ULL << 7),
+    SUBN_ADM_COMPMASK_TCLASS = (1ULL << 6),
+    SUBN_ADM_COMPMASK_SL = (1ULL << 12),
+    SUBN_ADM_COMPMASK_FLOW_LABEL = (1ULL << 13),
+    SUBN_ADM_COMPMASK_JOIN_STATE = (1ULL << 16),
 } subn_adm_component_mask;
 
 typedef enum {
-	MCAST_IS_JOINED   = 1,
-	MCAST_IS_ATTACHED = (1 << 1)
+    MCAST_IS_JOINED = 1,
+    MCAST_IS_ATTACHED = (1 << 1)
 } mcast_state;
 
 
@@ -126,34 +126,34 @@ typedef enum {
 
 /* Needed parameters for creating a multiple multicast group entity. */
 struct mcast_parameters {
-	int             	num_qps_on_group;
-	int			is_user_mgid;
-	int			mcast_state;
-	int 			ib_port;
-	uint16_t		mlid;
-	uint16_t		base_mlid;
-	const char		*user_mgid;
-	char			*ib_devname;
-	uint16_t 		pkey;
-	uint16_t		sm_lid;
-	uint8_t 		sm_sl;
-	union ibv_gid 		port_gid;
-	union ibv_gid		mgid;
-	/* In case it's a latency test. */
-	union ibv_gid		base_mgid;
-	int 			is_2nd_mgid_used;
+    int num_qps_on_group;
+    int is_user_mgid;
+    int mcast_state;
+    int ib_port;
+    uint16_t mlid;
+    uint16_t base_mlid;
+    const char* user_mgid;
+    char* ib_devname;
+    uint16_t pkey;
+    uint16_t sm_lid;
+    uint8_t sm_sl;
+    union ibv_gid port_gid;
+    union ibv_gid mgid;
+    /* In case it's a latency test. */
+    union ibv_gid base_mgid;
+    int is_2nd_mgid_used;
 };
 
 /* according to Table 195 in the IB spec 1.2.1 */
 
 struct sa_mad_packet_t {
-	u_int8_t		mad_header_buf[24];
-	u_int8_t		rmpp_header_buf[12];
-	u_int64_t		SM_Key;
-	u_int16_t		AttributeOffset;
-	u_int16_t		Reserved1;
-	u_int64_t		ComponentMask;
-	u_int8_t		SubnetAdminData[200];
+    u_int8_t mad_header_buf[24];
+    u_int8_t rmpp_header_buf[12];
+    u_int64_t SM_Key;
+    u_int16_t AttributeOffset;
+    u_int16_t Reserved1;
+    u_int64_t ComponentMask;
+    u_int8_t SubnetAdminData[200];
 }__attribute__((packed));
 
 /************************************************************************
@@ -176,7 +176,8 @@ struct sa_mad_packet_t {
  *
  * Return Value : 0 upon success. -1 if it fails.
  */
-void set_multicast_gid(struct mcast_parameters *params,uint32_t qp_num,int is_client);
+void set_multicast_gid(struct mcast_parameters* params, uint32_t qp_num,
+        int is_client);
 
 
 /* ctx_close_connection .
@@ -193,7 +194,8 @@ void set_multicast_gid(struct mcast_parameters *params,uint32_t qp_num,int is_cl
  *
  * Return Value : 0 upon success. -1 if it fails.
  */
-int join_multicast_group(subn_adm_method method,struct mcast_parameters *params);
+int
+join_multicast_group(subn_adm_method method, struct mcast_parameters* params);
 
 
 #endif /* MULTICAST_RESOURCES_H */

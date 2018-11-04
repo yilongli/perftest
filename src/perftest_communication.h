@@ -72,9 +72,9 @@
 #define ntoh_int(x) (int) ntohl((uint32_t) (x))
 #define hton_int(x) (int) htonl((uint32_t) (x))
 
-#define KEY_MSG_SIZE 	 (59)   /* Message size without gid. */
+#define KEY_MSG_SIZE     (59)   /* Message size without gid. */
 #define KEY_MSG_SIZE_GID (108)   /* Message size with gid (MGID as well). */
-#define SYNC_SPEC_ID	 (5)
+#define SYNC_SPEC_ID     (5)
 
 /* The Format of the message we pass through sockets , without passing Gid. */
 #define KEY_PRINT_FMT "%04x:%04x:%06x:%06x:%08x:%016llx:%08x"
@@ -92,7 +92,7 @@
 #define RDMA_FMT       " RKey %#08x VAddr %#016llx"
 
 /* The print number of SRQ in case of XRC */
-#define XRC_FMT 	   " SRQn %#08x"
+#define XRC_FMT       " SRQn %#08x"
 #define DC_FMT         " SRQn %#08x"
 
 /* The print format of a global address or a multicast address. */
@@ -102,8 +102,8 @@
 #define PERF_RAW_MGID_FMT " %s: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n"
 
 struct perftest_comm {
-	struct pingpong_context    *rdma_ctx;
-	struct perftest_parameters *rdma_params;
+    struct pingpong_context* rdma_ctx;
+    struct perftest_parameters* rdma_params;
 };
 
 /* bswap_double
@@ -128,8 +128,8 @@ double bswap_double(double x);
  *
  * Return Value : SUCCESS,FAILURE.
  */
-int create_comm_struct (struct perftest_comm *comm,
-		struct perftest_parameters *user_param);
+int create_comm_struct(struct perftest_comm* comm,
+        struct perftest_parameters* user_param);
 
 
 /* set_up_connection .
@@ -144,9 +144,9 @@ int create_comm_struct (struct perftest_comm *comm,
  *
  * Return Value : SUCCESS,FAILURE.
  */
-int set_up_connection(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param,
-		struct pingpong_dest *my_dest);
+int set_up_connection(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param,
+        struct pingpong_dest* my_dest);
 
 /* establish_connection .
  *
@@ -161,7 +161,7 @@ int set_up_connection(struct pingpong_context *ctx,
  *
  * Return Value : SUCCESS,FAILURE.
  */
-int establish_connection(struct perftest_comm *comm);
+int establish_connection(struct perftest_comm* comm);
 
 /* rdma_client_connect .
  *
@@ -173,8 +173,8 @@ int establish_connection(struct perftest_comm *comm);
  *
  * Return Value : SUCCESS,FAILURE.
  */
-int rdma_client_connect(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param);
+int rdma_client_connect(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param);
 
 /* retry_rdma_connect .
  *
@@ -187,8 +187,8 @@ int rdma_client_connect(struct pingpong_context *ctx,
  *
  * Return Value : SUCCESS,FAILURE.
  */
-int retry_rdma_connect(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param);
+int retry_rdma_connect(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param);
 
 /* rdma_server_connect .
  *
@@ -200,8 +200,9 @@ int retry_rdma_connect(struct pingpong_context *ctx,
  *
  * Return Value : SUCCESS,FAILURE.
  */
-int rdma_server_connect(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param);
+int rdma_server_connect(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param);
+
 /* ctx_hand_shake .
  *
  * Description :
@@ -220,10 +221,9 @@ int rdma_server_connect(struct pingpong_context *ctx,
  *
  * Return Value : 0 upon success. -1 if it fails.
  */
-int ctx_hand_shake(struct perftest_comm *comm,
-		struct pingpong_dest *my_dest,
-		struct pingpong_dest *rem_dest);
-
+int ctx_hand_shake(struct perftest_comm* comm,
+        struct pingpong_dest* my_dest,
+        struct pingpong_dest* rem_dest);
 
 
 /* ctx_print_pingpong_data.
@@ -237,8 +237,8 @@ int ctx_hand_shake(struct perftest_comm *comm,
  *  params  - The parameters of the machine.
  *  element - The element to print.
  */
-void ctx_print_pingpong_data(struct pingpong_dest *element,
-		struct perftest_comm *comm);
+void ctx_print_pingpong_data(struct pingpong_dest* element,
+        struct perftest_comm* comm);
 
 /* ctx_close_connection .
  *
@@ -254,9 +254,9 @@ void ctx_print_pingpong_data(struct pingpong_dest *element,
  *
  * Return Value : 0 upon success. -1 if it fails.
  */
-int ctx_close_connection(struct perftest_comm *comm,
-		struct pingpong_dest *my_dest,
-		struct pingpong_dest *rem_dest);
+int ctx_close_connection(struct perftest_comm* comm,
+        struct pingpong_dest* my_dest,
+        struct pingpong_dest* rem_dest);
 
 /* ctx_xchg_data .
  *
@@ -276,9 +276,9 @@ int ctx_close_connection(struct perftest_comm *comm,
  *
  * Return Value : 0 upon success. -1 if it fails.
  */
-int ctx_xchg_data( struct perftest_comm *comm,
-		void *my_data,
-		void *rem_data,int size);
+int ctx_xchg_data(struct perftest_comm* comm,
+        void* my_data,
+        void* rem_data, int size);
 
 /* ethernet_write_data .
  *
@@ -296,7 +296,7 @@ int ctx_xchg_data( struct perftest_comm *comm,
  *  size   - size of the message
  * Return Value : 0 upon success. -1 if it fails.
  */
-int ethernet_write_data(struct perftest_comm *comm, char *msg, size_t size);
+int ethernet_write_data(struct perftest_comm* comm, char* msg, size_t size);
 
 /* ethernet_read_data .
  *
@@ -311,7 +311,7 @@ int ethernet_write_data(struct perftest_comm *comm, char *msg, size_t size);
  *  size   - size of the message
  * Return Value : 0 upon success. -1 if it fails.
  */
-int ethernet_read_data(struct perftest_comm *comm, char *recv_msg, size_t size);
+int ethernet_read_data(struct perftest_comm* comm, char* recv_msg, size_t size);
 
 /* rdma_write_data .
  *
@@ -327,7 +327,7 @@ int ethernet_read_data(struct perftest_comm *comm, char *recv_msg, size_t size);
  *  size    - size of data
  * Return Value : 0 upon success. -1 if it fails.
  */
-int rdma_write_data(void *data,	struct perftest_comm *comm, int size);
+int rdma_write_data(void* data, struct perftest_comm* comm, int size);
 
 /* rdma_read_data .
  *
@@ -344,7 +344,7 @@ int rdma_write_data(void *data,	struct perftest_comm *comm, int size);
  * Return Value : 0 upon success. -1 if it fails.
  * Return Value : 0 upon success. -1 if it fails.
  */
-int rdma_read_data(void *data, struct perftest_comm *comm, int size);
+int rdma_read_data(void* data, struct perftest_comm* comm, int size);
 
 /* ctx_xchg_data .
  *
@@ -361,7 +361,8 @@ int rdma_read_data(void *data, struct perftest_comm *comm, int size);
  *
  * Return Value : 0 upon success. -1 if it fails.
  */
-int ctx_xchg_data_ethernet( struct perftest_comm *comm, void *my_data, void *rem_data,int size);
+int ctx_xchg_data_ethernet(struct perftest_comm* comm, void* my_data,
+        void* rem_data, int size);
 
 /* ctx_xchg_data .
  *
@@ -378,7 +379,9 @@ int ctx_xchg_data_ethernet( struct perftest_comm *comm, void *my_data, void *rem
  *
  * Return Value : 0 upon success. -1 if it fails.
  */
-int ctx_xchg_data_rdma( struct perftest_comm *comm, void *my_data, void *rem_data,int size);
+int
+ctx_xchg_data_rdma(struct perftest_comm* comm, void* my_data, void* rem_data,
+        int size);
 
 /* ctx_xchg_data .
  *
@@ -397,8 +400,9 @@ int ctx_xchg_data_rdma( struct perftest_comm *comm, void *my_data, void *rem_dat
  *
  * Return Value : 0 upon success. -1 if it fails.
  */
-void xchg_bw_reports (struct perftest_comm *comm, struct bw_report_data *my_bw_rep,
-		struct bw_report_data *rem_bw_rep, float remote_version);
+void
+xchg_bw_reports(struct perftest_comm* comm, struct bw_report_data* my_bw_rep,
+        struct bw_report_data* rem_bw_rep, float remote_version);
 
 /* exchange_versions.
  *
@@ -406,7 +410,8 @@ void xchg_bw_reports (struct perftest_comm *comm, struct bw_report_data *my_bw_r
  * 	Exchange versions between sides.
  *
  */
-void exchange_versions (struct perftest_comm *user_comm, struct perftest_parameters *user_param);
+void exchange_versions(struct perftest_comm* user_comm,
+        struct perftest_parameters* user_param);
 
 /* check_sys_data.
  *
@@ -414,7 +419,8 @@ void exchange_versions (struct perftest_comm *user_comm, struct perftest_paramet
  * 	Exchange system data between sides.
  *
  */
-void check_sys_data(struct perftest_comm *user_comm, struct perftest_parameters *user_param);
+void check_sys_data(struct perftest_comm* user_comm,
+        struct perftest_parameters* user_param);
 
 /* check_mtu
  *
@@ -427,10 +433,12 @@ void check_sys_data(struct perftest_comm *user_comm, struct perftest_parameters 
  *   user_comm	- user communication struct.
  * Return Value : SUCCESS, FAILURE.
  */
-int check_mtu(struct ibv_context *context,struct perftest_parameters *user_param, struct perftest_comm *user_comm);
+int
+check_mtu(struct ibv_context* context, struct perftest_parameters* user_param,
+        struct perftest_comm* user_comm);
 
-int ctx_check_gid_compatibility(struct pingpong_dest *my_dest,
-		struct pingpong_dest *rem_dest);
+int ctx_check_gid_compatibility(struct pingpong_dest* my_dest,
+        struct pingpong_dest* rem_dest);
 
 /* rdma_cm_get_rdma_address:
 *
@@ -450,8 +458,8 @@ int ctx_check_gid_compatibility(struct pingpong_dest *my_dest,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_get_rdma_address(struct perftest_parameters *user_param,
-		struct rdma_addrinfo *hints, struct rdma_addrinfo **rai);
+int rdma_cm_get_rdma_address(struct perftest_parameters* user_param,
+        struct rdma_addrinfo* hints, struct rdma_addrinfo** rai);
 
 /* rdma_cm_request_ud_connection_parameters:
 *
@@ -473,9 +481,9 @@ int rdma_cm_get_rdma_address(struct perftest_parameters *user_param,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_request_ud_connection_parameters(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param,
-		struct rdma_conn_param *conn_param);
+int rdma_cm_request_ud_connection_parameters(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param,
+        struct rdma_conn_param* conn_param);
 
 /* rdma_cm_initialize_ud_connection_parameters:
 *
@@ -496,8 +504,8 @@ int rdma_cm_request_ud_connection_parameters(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_initialize_ud_connection_parameters(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param);
+int rdma_cm_initialize_ud_connection_parameters(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param);
 
 /* rdma_cm_send_ud_connection_parameters:
 *
@@ -518,8 +526,8 @@ int rdma_cm_initialize_ud_connection_parameters(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_send_ud_connection_parameters(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param, int connection_index);
+int rdma_cm_send_ud_connection_parameters(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param, int connection_index);
 
 /* rdma_cm_establish_ud_connection:
 *
@@ -542,8 +550,8 @@ int rdma_cm_send_ud_connection_parameters(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_establish_ud_connection(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param, struct rdma_cm_event *event);
+int rdma_cm_establish_ud_connection(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param, struct rdma_cm_event* event);
 
 /* rdma_cm_connect_error:
 *
@@ -560,7 +568,7 @@ int rdma_cm_establish_ud_connection(struct pingpong_context *ctx,
 *    None.
 *
 */
-void rdma_cm_connect_error(struct pingpong_context *ctx);
+void rdma_cm_connect_error(struct pingpong_context* ctx);
 
 /* rdma_cm_address_handler:
 *
@@ -580,8 +588,8 @@ void rdma_cm_connect_error(struct pingpong_context *ctx);
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_address_handler(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param, struct rdma_cm_id *cma_id);
+int rdma_cm_address_handler(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param, struct rdma_cm_id* cma_id);
 
 /* rdma_cm_route_handler:
 *
@@ -601,8 +609,8 @@ int rdma_cm_address_handler(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_route_handler(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param, struct rdma_cm_id *cma_id);
+int rdma_cm_route_handler(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param, struct rdma_cm_id* cma_id);
 
 /* rdma_cm_connection_request_handler:
 *
@@ -622,8 +630,8 @@ int rdma_cm_route_handler(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_connection_request_handler(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param, struct rdma_cm_id *cma_id);
+int rdma_cm_connection_request_handler(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param, struct rdma_cm_id* cma_id);
 
 /* rdma_cm_connection_established_handler:
 *
@@ -644,8 +652,8 @@ int rdma_cm_connection_request_handler(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_connection_established_handler(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param, struct rdma_cm_event *event);
+int rdma_cm_connection_established_handler(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param, struct rdma_cm_event* event);
 
 /* rdma_cm_event_error_handler:
 *
@@ -663,8 +671,8 @@ int rdma_cm_connection_established_handler(struct pingpong_context *ctx,
 *    FAILURE(1).
 *
 */
-int rdma_cm_event_error_handler(struct pingpong_context *ctx,
-		struct rdma_cm_event *event);
+int rdma_cm_event_error_handler(struct pingpong_context* ctx,
+        struct rdma_cm_event* event);
 
 /* rdma_cm_disconnect_handler:
 *
@@ -682,7 +690,7 @@ int rdma_cm_event_error_handler(struct pingpong_context *ctx,
 *    None.
 *
 */
-void rdma_cm_disconnect_handler(struct pingpong_context *ctx);
+void rdma_cm_disconnect_handler(struct pingpong_context* ctx);
 
 /* rdma_cm_events_dispatcher:
 *
@@ -703,9 +711,9 @@ void rdma_cm_disconnect_handler(struct pingpong_context *ctx);
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_events_dispatcher(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param, struct rdma_cm_id *cma_id,
-		struct rdma_cm_event *event);
+int rdma_cm_events_dispatcher(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param, struct rdma_cm_id* cma_id,
+        struct rdma_cm_event* event);
 
 /* rdma_cm_connect_events:
 *
@@ -727,8 +735,8 @@ int rdma_cm_events_dispatcher(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_connect_events(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param);
+int rdma_cm_connect_events(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param);
 
 /* rdma_cm_disconnect_nodes:
 *
@@ -747,8 +755,8 @@ int rdma_cm_connect_events(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_disconnect_nodes(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param);
+int rdma_cm_disconnect_nodes(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param);
 
 /* rdma_cm_server_connection:
 *
@@ -767,8 +775,8 @@ int rdma_cm_disconnect_nodes(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_server_connection(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param, struct rdma_addrinfo *hints);
+int rdma_cm_server_connection(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param, struct rdma_addrinfo* hints);
 
 /* _rdma_cm_client_connection:
 *
@@ -787,8 +795,8 @@ int rdma_cm_server_connection(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int _rdma_cm_client_connection(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param, struct rdma_addrinfo *hints);
+int _rdma_cm_client_connection(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param, struct rdma_addrinfo* hints);
 
 /* _rdma_cm_client_connection:
 *
@@ -808,8 +816,8 @@ int _rdma_cm_client_connection(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int rdma_cm_client_connection(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param, struct rdma_addrinfo *hints);
+int rdma_cm_client_connection(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param, struct rdma_addrinfo* hints);
 
 /* create_rdma_cm_connection:
 *
@@ -831,9 +839,9 @@ int rdma_cm_client_connection(struct pingpong_context *ctx,
 *    rc - On success: SUCCESS(0), on failure: FAILURE(1).
 *
 */
-int create_rdma_cm_connection(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param, struct perftest_comm *comm,
-		struct pingpong_dest *my_dest, struct pingpong_dest *rem_dest);
+int create_rdma_cm_connection(struct pingpong_context* ctx,
+        struct perftest_parameters* user_param, struct perftest_comm* comm,
+        struct pingpong_dest* my_dest, struct pingpong_dest* rem_dest);
 
 
 #endif /* PERFTEST_COMMUNICATION_H */

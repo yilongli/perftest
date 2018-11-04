@@ -56,99 +56,101 @@
 /******************************************************************************
  *
  ******************************************************************************/
-int main(int argc, char *argv[])
-{
-	struct ibv_device		*ib_dev = NULL;
-	struct pingpong_context		ctx;
-	struct raw_ethernet_info	*my_dest_info = NULL;
-	struct raw_ethernet_info	*rem_dest_info = NULL;
-	int				ret_parser;
-	struct perftest_parameters	user_param;
-	struct report_options		report;
+int main(int argc, char* argv[]) {
+    struct ibv_device* ib_dev = NULL;
+    struct pingpong_context ctx;
+    struct raw_ethernet_info* my_dest_info = NULL;
+    struct raw_ethernet_info* rem_dest_info = NULL;
+    int ret_parser;
+    struct perftest_parameters user_param;
+    struct report_options report;
 
-	/* init default values to user's parameters */
-	memset(&ctx, 0, sizeof(struct pingpong_context));
-	memset(&user_param, 0, sizeof(struct perftest_parameters));
+    /* init default values to user's parameters */
+    memset(&ctx, 0, sizeof(struct pingpong_context));
+    memset(&user_param, 0, sizeof(struct perftest_parameters));
 
-	user_param.tst     = FS_RATE;
-	user_param.verb    = SEND;
-	strncpy(user_param.version, VERSION, sizeof(user_param.version));
-	user_param.connection_type = RawEth;
-	user_param.r_flag  = &report;
+    user_param.tst = FS_RATE;
+    user_param.verb = SEND;
+    strncpy(user_param.version, VERSION, sizeof(user_param.version));
+    user_param.connection_type = RawEth;
+    user_param.r_flag = &report;
 
-	ret_parser = parser(&user_param, argv, argc);
+    ret_parser = parser(&user_param, argv, argc);
 
-	if (ret_parser) {
-		if (ret_parser != VERSION_EXIT && ret_parser != HELP_EXIT) {
-			fprintf(stderr, " Parser function exited with Error\n");
-		}
-		DEBUG_LOG(TRACE,"<<<<<<%s", __FUNCTION__);
-		return FAILURE;
-	}
-	user_param.machine = SERVER;
+    if (ret_parser) {
+        if (ret_parser != VERSION_EXIT && ret_parser != HELP_EXIT) {
+            fprintf(stderr, " Parser function exited with Error\n");
+        }
+        DEBUG_LOG(TRACE, "<<<<<<%s", __FUNCTION__);
+        return FAILURE;
+    }
+    user_param.machine = SERVER;
 
-	/* Allocate user input dependable structs */
-	ALLOCATE(my_dest_info, struct raw_ethernet_info, user_param.num_of_qps);
-	memset(my_dest_info, 0, sizeof(struct raw_ethernet_info) * user_param.num_of_qps);
-	ALLOCATE(rem_dest_info, struct raw_ethernet_info, user_param.num_of_qps);
-	memset(rem_dest_info, 0, sizeof(struct raw_ethernet_info) * user_param.num_of_qps);
+    /* Allocate user input dependable structs */
+    ALLOCATE(my_dest_info, struct raw_ethernet_info, user_param.num_of_qps);
+    memset(my_dest_info, 0,
+            sizeof(struct raw_ethernet_info) * user_param.num_of_qps);
+    ALLOCATE(rem_dest_info, struct raw_ethernet_info, user_param.num_of_qps);
+    memset(rem_dest_info, 0,
+            sizeof(struct raw_ethernet_info) * user_param.num_of_qps);
 
-	/* Finding the IB device selected (or default if no selected). */
-	ib_dev = ctx_find_dev(user_param.ib_devname);
-	if (!ib_dev) {
-		fprintf(stderr, "Unable to find the Infiniband/RoCE device\n");
-		DEBUG_LOG(TRACE, "<<<<<<%s", __FUNCTION__);
-		return FAILURE;
-	}
-	GET_STRING(user_param.ib_devname, ibv_get_device_name(ib_dev));
+    /* Finding the IB device selected (or default if no selected). */
+    ib_dev = ctx_find_dev(user_param.ib_devname);
+    if (!ib_dev) {
+        fprintf(stderr, "Unable to find the Infiniband/RoCE device\n");
+        DEBUG_LOG(TRACE, "<<<<<<%s", __FUNCTION__);
+        return FAILURE;
+    }
+    GET_STRING(user_param.ib_devname, ibv_get_device_name(ib_dev));
 
-	if (check_flow_steering_support(user_param.ib_devname)) {
-		return FAILURE;
-	}
+    if (check_flow_steering_support(user_param.ib_devname)) {
+        return FAILURE;
+    }
 
-	/* Getting the relevant context from the device */
-	ctx.context = ibv_open_device(ib_dev);
-	if (!ctx.context) {
-		fprintf(stderr, "Couldn't get context for the device\n");
-		DEBUG_LOG(TRACE, "<<<<<<%s", __FUNCTION__);
-		return FAILURE;
-	}
+    /* Getting the relevant context from the device */
+    ctx.context = ibv_open_device(ib_dev);
+    if (!ctx.context) {
+        fprintf(stderr, "Couldn't get context for the device\n");
+        DEBUG_LOG(TRACE, "<<<<<<%s", __FUNCTION__);
+        return FAILURE;
+    }
 
-	/* See if MTU and link type are valid and supported. */
-	if (check_link_and_mtu(ctx.context, &user_param)) {
-		fprintf(stderr, "Couldn't get context for the device\n");
-		DEBUG_LOG(TRACE, "<<<<<<%s", __FUNCTION__);
-		return FAILURE;
-	}
+    /* See if MTU and link type are valid and supported. */
+    if (check_link_and_mtu(ctx.context, &user_param)) {
+        fprintf(stderr, "Couldn't get context for the device\n");
+        DEBUG_LOG(TRACE, "<<<<<<%s", __FUNCTION__);
+        return FAILURE;
+    }
 
-	/* Allocating arrays needed for the test. */
-	alloc_ctx(&ctx, &user_param);
+    /* Allocating arrays needed for the test. */
+    alloc_ctx(&ctx, &user_param);
 
-	/* create all the basic IB resources (data buffer, PD, MR, CQ and events channel) */
-	if (ctx_init(&ctx, &user_param)) {
-		fprintf(stderr, "Couldn't create IB resources\n");
-		return FAILURE;
-	}
+    /* create all the basic IB resources (data buffer, PD, MR, CQ and events channel) */
+    if (ctx_init(&ctx, &user_param)) {
+        fprintf(stderr, "Couldn't create IB resources\n");
+        return FAILURE;
+    }
 
-	/* Print basic test information. */
-	ctx_print_test_info(&user_param);
+    /* Print basic test information. */
+    ctx_print_test_info(&user_param);
 
-	if(run_iter_fs(&ctx, &user_param)){
-		fprintf(stderr, "Unable to run iter fs rate\n");
-		return FAILURE;
-	}
+    if (run_iter_fs(&ctx, &user_param)) {
+        fprintf(stderr, "Unable to run iter fs rate\n");
+        return FAILURE;
+    }
 
-	print_report_fs_rate(&user_param);
+    print_report_fs_rate(&user_param);
 
-	if (destroy_ctx(&ctx, &user_param)) {
-		fprintf(stderr, "Failed to destroy_ctx\n");
-		DEBUG_LOG(TRACE, "<<<<<<%s", __FUNCTION__);
-		return FAILURE;
-	}
+    if (destroy_ctx(&ctx, &user_param)) {
+        fprintf(stderr, "Failed to destroy_ctx\n");
+        DEBUG_LOG(TRACE, "<<<<<<%s", __FUNCTION__);
+        return FAILURE;
+    }
 
-	if (user_param.output == FULL_VERBOSITY)
-		printf(RESULT_LINE);
+    if (user_param.output == FULL_VERBOSITY) {
+        printf(RESULT_LINE);
+    }
 
-	DEBUG_LOG(TRACE, "<<<<<<%s", __FUNCTION__);
-	return SUCCESS;
+    DEBUG_LOG(TRACE, "<<<<<<%s", __FUNCTION__);
+    return SUCCESS;
 }
