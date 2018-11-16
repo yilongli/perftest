@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <x86intrin.h>
 
 #if !defined(__FreeBSD__)
 
@@ -1047,22 +1048,30 @@ int destroy_ctx(struct pingpong_context* ctx,
 int create_reg_cqs(struct pingpong_context* ctx,
         struct perftest_parameters* user_param,
         int tx_buffer_depth, int need_recv_cq) {
-    ctx->send_cq = ibv_create_cq(ctx->context, tx_buffer_depth *
-                                               user_param->num_of_qps, NULL,
+    ctx->send_cq = ibv_create_cq(ctx->context,
+            tx_buffer_depth * user_param->num_of_qps, NULL,
             ctx->channel, user_param->eq_num);
     if (!ctx->send_cq) {
         fprintf(stderr, "Couldn't create CQ\n");
         return FAILURE;
     }
+    fprintf(stderr, "Created Send CQ %p, requested cqe %d, channel %p, "
+            "comp_vector %d\n", ctx->send_cq,
+            tx_buffer_depth * user_param->num_of_qps, ctx->channel,
+            user_param->eq_num);
 
     if (need_recv_cq) {
-        ctx->recv_cq = ibv_create_cq(ctx->context, user_param->rx_depth *
-                                                   user_param->num_of_qps, NULL,
+        ctx->recv_cq = ibv_create_cq(ctx->context,
+                user_param->rx_depth * user_param->num_of_qps, NULL,
                 ctx->channel, user_param->eq_num);
         if (!ctx->recv_cq) {
             fprintf(stderr, "Couldn't create a receiver CQ\n");
             return FAILURE;
         }
+        fprintf(stderr, "Created Recv CQ %p, requested cqe %d, channel %p, "
+                "comp_vector %d\n", ctx->recv_cq,
+                user_param->rx_depth * user_param->num_of_qps, ctx->channel,
+                user_param->eq_num);
     }
 
     return SUCCESS;
@@ -1978,9 +1987,21 @@ struct ibv_qp* ctx_qp_create(struct pingpong_context* ctx,
         }
 
     } else {
+        fprintf(stderr, "Creating QP, srq %p, max_send_wr %u, max_recv_wr %u, "
+                "max_send_sge %u, max_recv_sge %u, max_inline_data %u, "
+                "sq_sig_all %d\n", attr.srq,
+                attr.cap.max_send_wr, attr.cap.max_recv_wr,
+                attr.cap.max_send_sge, attr.cap.max_recv_sge,
+                attr.cap.max_inline_data, attr.sq_sig_all);
         qp = ibv_create_qp(ctx->pd, &attr);
+        fprintf(stderr, "Created QP %p, srq %p, max_send_wr %u, max_recv_wr %u, "
+                "max_send_sge %u, max_recv_sge %u, max_inline_data %u, "
+                "sq_sig_all %d\n", qp, attr.srq,
+                attr.cap.max_send_wr, attr.cap.max_recv_wr,
+                attr.cap.max_send_sge, attr.cap.max_recv_sge,
+                attr.cap.max_inline_data, attr.sq_sig_all);
     }
-    if (errno == ENOMEM) {
+    if (!qp && (errno == ENOMEM)) {
         fprintf(stderr,
                 "Requested SQ size might be too big. Try reducing TX depth and/or inline size.\n");
         fprintf(stderr, "Current TX depth is %d and  inline size is %d .\n",
@@ -2215,6 +2236,12 @@ ctx_modify_qp_to_init(struct ibv_qp* qp, struct perftest_parameters* user_param,
 	else
 #endif
     ret = ibv_modify_qp(qp, &attr, flags);
+    fprintf(stderr, "Modified QP %p, max_send_wr %u, max_recv_wr %u, "
+                    "max_send_sge %u, max_recv_sge %u, max_inline_data %u, "
+                    "flags %d\n", qp,
+            attr.cap.max_send_wr, attr.cap.max_recv_wr,
+            attr.cap.max_send_sge, attr.cap.max_recv_sge,
+            attr.cap.max_inline_data, flags);
 
     if (ret) {
         fprintf(stderr, "Failed to modify QP to INIT, ret=%d\n", ret);
@@ -3933,15 +3960,20 @@ int run_iter_bw_infinitely(struct pingpong_context* ctx,
     user_param->iters = 0;
 
     user_param->tposted[0] = get_cycles();
+    uint64_t total_cycles = 0;
+    uint64_t total_sent = 0;
 
     /* main loop for posting */
     while (1) {
+        uint64_t start_tsc = __rdtsc();
+        int found_work = 0;
+
         /* main loop to run over all the qps and post each time n messages */
         for (index = 0; index < num_of_qps; index++) {
 
             while ((ctx->scnt[index] - ctx->ccnt[index]) <
                    user_param->tx_depth) {
-
+                found_work = 1;
                 if (user_param->post_list == 1 &&
                     (ctx->scnt[index] % user_param->cq_mod == 0 &&
                      user_param->cq_mod > 1)) {
@@ -3951,6 +3983,10 @@ int run_iter_bw_infinitely(struct pingpong_context* ctx,
 
                 err = ibv_post_send(ctx->qp[index],
                         &ctx->wr[index * user_param->post_list], &bad_wr);
+                total_sent += user_param->post_list;
+                totscnt += user_param->post_list;
+                timetrace_record("send_bw client: post %d send requests, "
+                        "totscnt %u", user_param->post_list, totscnt);
                 if (err) {
                     fprintf(stderr, "Couldn't post send: %d scnt=%lu \n", index,
                             ctx->scnt[index]);
@@ -3959,7 +3995,6 @@ int run_iter_bw_infinitely(struct pingpong_context* ctx,
                 }
                 ctx->scnt[index] += user_param->post_list;
                 scnt_for_qp[index] += user_param->post_list;
-                totscnt += user_param->post_list;
 
                 /* ask for completion on this wr */
                 if (user_param->post_list == 1 &&
@@ -3975,7 +4010,9 @@ int run_iter_bw_infinitely(struct pingpong_context* ctx,
             ne = ibv_poll_cq(ctx->send_cq, CTX_POLL_BATCH, wc);
 
             if (ne > 0) {
-
+                found_work = 1;
+                timetrace_record("send_bw client: ibv_poll_cq received %d "
+                        "completion signals", ne);
                 for (i = 0; i < ne; i++) {
                     if (wc[i].status != IBV_WC_SUCCESS) {
                         NOTIFY_COMP_ERROR_SEND(wc[i],
@@ -3990,13 +4027,23 @@ int run_iter_bw_infinitely(struct pingpong_context* ctx,
                     totccnt += user_param->cq_mod;
                     ctx->ccnt[wc_id] += user_param->cq_mod;
                 }
-
             } else if (ne < 0) {
                 fprintf(stderr, "poll CQ failed %d\n", ne);
                 return_value = FAILURE;
                 goto cleaning;
             }
         }
+
+        if (found_work) {
+            total_cycles += __rdtsc() - start_tsc;
+        }
+        if (total_sent > 1000) {
+            timetrace_record("average per-packet TX cost %u cyc",
+                    total_cycles / total_sent);
+            total_cycles = 0;
+            total_sent = 0;
+        }
+
     }
     cleaning:
     free(scnt_for_qp);
@@ -4030,14 +4077,24 @@ int run_iter_bw_infinitely_server(struct pingpong_context* ctx,
     ALLOCATE(scredit_for_qp, int, user_param->num_of_qps);
     memset(scredit_for_qp, 0, sizeof(int) * user_param->num_of_qps);
 
+    uint64_t poll_cq_cycles[CTX_POLL_BATCH+1];
+    uint64_t poll_cq_cnt[CTX_POLL_BATCH+1];
+    uint64_t total_cycles = 0;
+    uint64_t total_received = 0;
     while (1) {
-
+        int found_work = 0;
+        uint64_t start_tsc = __rdtsc();
+        timetrace_record_ts(start_tsc,
+                "send_bw server: about to call ibv_poll_cq");
         ne = ibv_poll_cq(ctx->recv_cq, CTX_POLL_BATCH, wc);
+        uint64_t poll_cq_end = __rdtsc();
 
         if (ne > 0) {
-
+            timetrace_record_ts(poll_cq_end,
+                    "send_bw server: ibv_poll_cq received %d packets, total %u",
+                    ne, total_received);
+            found_work = 1;
             for (i = 0; i < ne; i++) {
-
                 if (wc[i].status != IBV_WC_SUCCESS) {
                     fprintf(stderr,
                             "A completion with Error in run_infinitely_bw_server function");
@@ -4046,7 +4103,6 @@ int run_iter_bw_infinitely_server(struct pingpong_context* ctx,
                 }
 
                 if (user_param->use_srq) {
-
                     if (ibv_post_srq_recv(ctx->srq, &ctx->rwr[wc[i].wr_id],
                             &bad_wr_recv)) {
                         fprintf(stderr, "Couldn't post recv SRQ. QP = %d:\n",
@@ -4054,9 +4110,9 @@ int run_iter_bw_infinitely_server(struct pingpong_context* ctx,
                         return_value = FAILURE;
                         goto cleaning;
                     }
+                    timetrace_record("send_bw server: post recv buffer to SRQ");
 
                 } else {
-
                     if (ibv_post_recv(ctx->qp[wc[i].wr_id],
                             &ctx->rwr[wc[i].wr_id], &bad_wr_recv)) {
                         fprintf(stderr, "Couldn't post recv Qp=%d\n",
@@ -4064,13 +4120,42 @@ int run_iter_bw_infinitely_server(struct pingpong_context* ctx,
                         return_value = 15;
                         goto cleaning;
                     }
+                    timetrace_record("send_bw server: post recv buffer");
                 }
             }
-
         } else if (ne < 0) {
             fprintf(stderr, "Poll Receive CQ failed %d\n", ne);
             return_value = FAILURE;
             goto cleaning;
+        }
+
+        total_received += ne;
+        poll_cq_cycles[ne] += poll_cq_end - start_tsc;
+        poll_cq_cnt[ne]++;
+        if (found_work) {
+            total_cycles += __rdtsc() - start_tsc;
+        }
+        if (total_received > 100) {
+            uint64_t poll_cq_cycles_tot = 0;
+            for (int n = 1; n < CTX_POLL_BATCH + 1; n++) {
+                poll_cq_cycles_tot += poll_cq_cycles[n];
+            }
+            timetrace_record("average per-packet rx cost %u cyc",
+                    total_cycles / total_received);
+            timetrace_record("poll_cq_cyc[1..4] %u, %u, %u, %u",
+                    poll_cq_cnt[1] ? poll_cq_cycles[1] / poll_cq_cnt[1] : 0,
+                    poll_cq_cnt[2] ? poll_cq_cycles[2] / poll_cq_cnt[2] : 0,
+                    poll_cq_cnt[3] ? poll_cq_cycles[3] / poll_cq_cnt[3] : 0,
+                    poll_cq_cnt[4] ? poll_cq_cycles[4] / poll_cq_cnt[4] : 0);
+            timetrace_record("poll_cq_cyc[5..8] %u, %u, %u, %u",
+                    poll_cq_cnt[5] ? poll_cq_cycles[5] / poll_cq_cnt[5] : 0,
+                    poll_cq_cnt[6] ? poll_cq_cycles[6] / poll_cq_cnt[6] : 0,
+                    poll_cq_cnt[7] ? poll_cq_cycles[7] / poll_cq_cnt[7] : 0,
+                    poll_cq_cnt[8] ? poll_cq_cycles[8] / poll_cq_cnt[8] : 0);
+            total_cycles = 0;
+            memset(poll_cq_cycles, 0, sizeof(poll_cq_cycles));
+            memset(poll_cq_cnt, 0, sizeof(poll_cq_cycles));
+            total_received = 0;
         }
     }
 

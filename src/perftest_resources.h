@@ -55,6 +55,8 @@
 #include <rdma/rdma_cma.h>
 #include <stdint.h>
 
+#include "PerfUtils/timetrace_wrapper.h"
+
 #if defined(__FreeBSD__)
 #include <infiniband/byteswap.h>
 #else
@@ -77,7 +79,7 @@
 /* Outstanding reads for "read" verb only. */
 #define MAX_SEND_SGE        (1)
 #define MAX_RECV_SGE        (1)
-#define CTX_POLL_BATCH        (16)
+#define CTX_POLL_BATCH        (8)
 #define PL            (1)
 #define ATOMIC_ADD_VALUE    (1)
 #define ATOMIC_SWAP_VALUE    (0)

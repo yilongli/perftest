@@ -37,6 +37,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <bits/signum.h>
+#include <signal.h>
 
 #include "perftest_parameters.h"
 #include "perftest_resources.h"
@@ -151,6 +154,12 @@ static int send_destroy_ctx(
     return destroy_ctx(ctx, user_param);
 }
 
+void exit_handler() {
+//    fprintf(stderr, "exit_handler invoked\n");
+    timetrace_print();
+    exit(0);
+}
+
 /******************************************************************************
  *
  ******************************************************************************/
@@ -165,6 +174,18 @@ int main(int argc, char* argv[]) {
     struct bw_report_data my_bw_rep, rem_bw_rep;
     int ret_parser, i = 0, rc;
     int size_max_pow = 24;
+
+    char hostname[50];
+    if (gethostname(hostname, 50) == 0) {
+        char output_file[50];
+        sprintf(output_file, "ib_send_bw.%s.log", hostname);
+        timetrace_set_output_filename(output_file);
+        fprintf(stderr, "timetrace output file: %s\n", output_file);
+    } else {
+        fprintf(stderr, "gethostname failed");
+        return 0;
+    }
+    signal(SIGINT, exit_handler);
 
     /* init default values to user's parameters */
     memset(&ctx, 0, sizeof(struct pingpong_context));
